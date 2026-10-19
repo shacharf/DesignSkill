@@ -1,0 +1,12 @@
+---
+name: doc-write
+description: Write or revise human-readable system-design pages with a main ideas document, recursively understandable modules, and technical detail only at the deepest useful level.
+---
+
+Read [the reading contract](references/reading-contract.md) before drafting or restructuring. Read the relevant module, parent overview, neighboring interfaces, supporting sources, and decisions. Use actual passages; do not invent missing design facts. The user's writing request authorizes relevant design edits; no manuscript-specific approval step applies.
+
+Explain purpose and core mechanism before internal parts. Introduce vocabulary when it becomes necessary. Establish the main story in `design.md`, then develop the selected module recursively. Use a small example or diagram only when it clarifies the mechanism. Roughly three to five peer concepts is a cognitive target, not a reason to omit constraints. Keep unresolved choices visible where they matter.
+
+Keep each page understandable when opened directly: state its purpose, essential context, responsibilities, and interactions. Link to deeper mechanisms and specifications instead of embedding all detail. Small leaves need no artificial children or boilerplate sections. Preserve precise edge cases, interfaces, algorithms, and configuration in leaf pages or linked detail, rather than deleting them to shorten the design.
+
+Edit coherently rather than accumulating summaries. Respect manual edits and existing authorization. After a change, inspect parent summaries and affected neighboring modules; update stale explanations within the requested scope and record remaining work. Keep alternative history and detailed rationale in linked discussions. Source notes retain provenance; link design claims to supporting notes where useful without cluttering the narrative. Run `docagent checkpoint` after saving. Report the changed explanation and any material unresolved choice.

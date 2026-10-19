@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A progressively detailed system design">
+  <title>System design</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
+  <style>
+    :root { --theme-color: #2563eb; }
+    body { color: #253247; }
+    .markdown-section { max-width: 780px; padding: 36px 28px 80px; line-height: 1.8; }
+    .markdown-section h1 { letter-spacing: -.025em; }
+    .markdown-section h2 { margin-top: 2.2em; }
+    .sidebar { background: #f8fafc; border-color: #e2e8f0; }
+    .sidebar-nav a { white-space: normal; }
+    .markdown-section details { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 18px; }
+    .mermaid { overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <div id="app">Loading design…</div>
+  <script>
+    window.$docsify = {
+      name: 'System design', homepage: 'design.md', loadSidebar: true,
+      subMaxLevel: 0, auto2top: true,
+      alias: { '/.*/_sidebar.md': '/_sidebar.md' },
+      plugins: [function (hook) {
+        hook.beforeEach(function (text) { return text.replace(/^---\n[\s\S]*?\n---\n/, ''); });
+        hook.doneEach(function () {
+          if (!window.mermaid) return;
+          document.querySelectorAll('pre[data-lang="mermaid"]').forEach(function (pre) {
+            var diagram = document.createElement('div');
+            diagram.className = 'mermaid'; diagram.textContent = pre.textContent;
+            pre.replaceWith(diagram);
+          });
+          window.mermaid.run({ querySelector: '.mermaid' }).catch(function (error) { console.warn(error); });
+        });
+      }]
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>if (window.mermaid) mermaid.initialize({startOnLoad: false, securityLevel: 'strict'});</script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4"></script>
+</body>
+</html>

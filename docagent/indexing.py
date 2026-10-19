@@ -17,11 +17,11 @@ import time
 from urllib.parse import unquote, urlparse
 import yaml
 
-INDEX = "research"
+INDEX = "design"
 
 
 def _dir(root):
-    path = Path(root).resolve() / ".rs"
+    path = Path(root).resolve() / ".docagent"
     path.mkdir(exist_ok=True)
     return path
 
@@ -69,9 +69,9 @@ def configure(root):
     expected = {"version": "1.0", "ftsTokenizer": "unicode61", "collections": [
         {"name": INDEX, "path": str(root), "pattern": "**/*",
          "include": [".md", ".pdf"],
-         "exclude": [".rs/**", ".agents/**", ".claude/**", ".git/**", "node_modules/**"]}],
+         "exclude": [".docagent/**", ".agents/**", ".claude/**", ".git/**", "node_modules/**"]}],
         "contexts": []}
-    model = os.environ.get("RS_GNO_EMBED_MODEL")
+    model = os.environ.get("DOCAGENT_GNO_EMBED_MODEL")
     if model:
         expected["collections"][0]["models"] = {"embed": model}
     if file.exists():
@@ -131,7 +131,7 @@ def enqueue(root, paths):
 
 
 def start_worker(root):
-    if os.environ.get("RS_DISABLE_WORKER") == "1":
+    if os.environ.get("DOCAGENT_DISABLE_WORKER") == "1" or not (_dir(root) / "gno.yaml").exists():
         return False
     # Reserve startup before Popen: worker itself holds a separate lifecycle lock.
     with _lock(root, "index-start"):
@@ -149,7 +149,7 @@ def start_worker(root):
         package_root = str(Path(__file__).resolve().parent.parent)
         env["PYTHONPATH"] = package_root + os.pathsep + env.get("PYTHONPATH", "")
         with (_dir(root) / "index-worker.log").open("a") as output:
-            subprocess.Popen([sys.executable, "-m", "rs.indexing", str(Path(root).resolve())],
+            subprocess.Popen([sys.executable, "-m", "docagent.indexing", str(Path(root).resolve())],
                              cwd=root, env=env, stdin=subprocess.DEVNULL,
                              stdout=output, stderr=output, start_new_session=True)
     return True

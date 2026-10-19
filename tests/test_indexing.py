@@ -6,23 +6,23 @@ import subprocess
 import time
 
 import pytest
-from rs import indexing
+from docagent import indexing
 
 
 @pytest.fixture
 def project(tmp_path, monkeypatch):
-    monkeypatch.setenv("RS_DISABLE_WORKER", "1")
+    monkeypatch.setenv("DOCAGENT_DISABLE_WORKER", "1")
     indexing.configure(tmp_path)
     return tmp_path
 
 
 def test_queue_coalesces_persists_and_rejects_outside_paths(project):
-    indexing.enqueue(project, ["TODO.md", "threads/001.md"])
+    indexing.enqueue(project, ["TODO.md", "discussions/001.md"])
     indexing.enqueue(project, ["TODO.md"])
     state = indexing.state(project)
-    assert state["lexical_pending"] == ["TODO.md", "threads/001.md"]
+    assert state["lexical_pending"] == ["TODO.md", "discussions/001.md"]
     assert state["semantic_pending"]
-    assert json.loads((project / ".rs/index-state.json").read_text()) == state
+    assert json.loads((project / ".docagent/index-state.json").read_text()) == state
     with pytest.raises(ValueError):
         indexing.enqueue(project, ["../outside.md"])
 
@@ -71,35 +71,35 @@ def test_search_is_scoped_bounded_and_never_syncs(project, monkeypatch):
     calls = []
     def run(root, args):
         calls.append(args)
-        return json.dumps({"results": [{"uri": "gno://research/threads/001.md?index=research",
+        return json.dumps({"results": [{"uri": "gno://design/discussions/001.md?index=design",
                                         "line": 17, "snippet": "x" * 5000}]})
     monkeypatch.setattr(indexing, "_run", run)
     result = indexing.search(project, "invariant", mode="hybrid")
-    assert calls == [["query", "invariant", "--collection", "research", "--limit", "5", "--json", "--fast"]]
+    assert calls == [["query", "invariant", "--collection", "design", "--limit", "5", "--json", "--fast"]]
     assert result["results"][0]["line"] == 17
     assert len(result["results"][0]["snippet"]) == 2400
     command = indexing._command(project, calls[0])
-    assert command[1:5] == ["--config", str(project / ".rs/gno.yaml"), "--index", "research"]
-    assert indexing._env(project)["GNO_DATA_DIR"] == str(project / ".rs/gno-data")
+    assert command[1:5] == ["--config", str(project / ".docagent/gno.yaml"), "--index", "design"]
+    assert indexing._env(project)["GNO_DATA_DIR"] == str(project / ".docagent/gno-data")
 
 
 def test_private_config_preserved_on_conflict(project):
-    file = project / ".rs/gno.yaml"
+    file = project / ".docagent/gno.yaml"
     file.write_text("modified: true\n")
     with pytest.raises(ValueError, match="Conflicting"):
         indexing.configure(project)
     assert file.read_text() == "modified: true\n"
 
 
-@pytest.mark.skipif(not shutil.which("gno") or os.environ.get("RS_TEST_GNO") != "1",
-                    reason="Set RS_TEST_GNO=1 for actual installed GNO integration")
+@pytest.mark.skipif(not shutil.which("gno") or os.environ.get("DOCAGENT_TEST_GNO") != "1",
+                    reason="Set DOCAGENT_TEST_GNO=1 for actual installed GNO integration")
 def test_real_gno_scoping_tags_delete_and_latency(project, tmp_path_factory):
     other = tmp_path_factory.mktemp("gno-other")
     indexing.configure(other)
     (other / "other.md").write_text("Private quokka unrelated evidence")
     indexing.enqueue(other, ["other.md"])
     indexing.flush(other, semantic=False)
-    note = project / "threads/001.md"
+    note = project / "discussions/001.md"
     note.parent.mkdir()
     note.write_text('---\nid: "001"\nstatus: obsolete\ntags: [reasoning]\n---\n'
                     '# Quokka invariant\nOur quokka algorithm preserves the invariant.\n')
@@ -116,7 +116,7 @@ def test_real_gno_scoping_tags_delete_and_latency(project, tmp_path_factory):
         assert result["results"][0]["source"] == str(note)
         assert result["results"][0]["status"] == "obsolete"
         assert result["results"][0]["line"] > 0
-    tagged = json.loads(indexing._run(project, ["search", "quokka", "--collection", "research",
+    tagged = json.loads(indexing._run(project, ["search", "quokka", "--collection", "design",
                                               "--tags-all", "reasoning", "--json"]))
     assert len(tagged["results"]) == 1
     # An incremental update picks up changed text without introducing the other project.

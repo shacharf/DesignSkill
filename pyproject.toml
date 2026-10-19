@@ -3,17 +3,20 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "research-rs"
+name = "design-docagent"
 version = "0.1.0"
-description = "Markdown-first research workflow bookkeeping"
+description = "Human-readable hierarchical design workflow"
 requires-python = ">=3.10"
 dependencies = ["PyYAML>=6.0"]
 
 [project.scripts]
-rsagent = "rs.cli:main"
+docagent = "docagent.cli:main"
 
 [tool.setuptools]
-packages = ["rs"]
+packages = ["docagent"]
+
+[tool.setuptools.package-data]
+docagent = ["assets/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
