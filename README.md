@@ -36,11 +36,15 @@ After editing this toolkit, reinstall the command with `uv tool install --reinst
 2. **Shape:** use doc-design to establish the main story in `design.md` and a few major modules.
 3. **Explore:** use doc-brainstorm when a design choice needs alternatives and tradeoffs.
 4. **Explain:** use doc-write to develop a selected module, repeating the same progression at each depth.
-5. **Review:** use doc-review to check readability, consistency, and whether simplification lost important details.
+5. **Review:** after substantial drafting or revision, use doc-review to check readability, ambiguous interpretations, missing behavior, and consistency across affected modules. At major milestones, review the overall design. Record unresolved questions instead of inventing answers; small wording edits need no full review.
 
 Use doc-help whenever you need guidance. Invoke skills as `$doc-design` in Codex or `/doc-design` in Claude, or request the task naturally. Skills are not a mandatory pipeline. They save meaningful progress and resume context so a later conversation can continue.
 
 ### Reading contract
+
+Every document we author is human-readable first, including design pages, source summaries, brainstorming records, decisions, TODOs, working summaries, and help. State its purpose, provide the context needed to understand it, use plain language, and introduce ideas progressively. Keep essential meaning visible in the document body; metadata supports tools and must not be the only place a reader can find a task’s motivation, a decision’s status, or necessary context. Preserve original input files unchanged; machine runtime files are separate from authored documents.
+
+Choose the format that makes the idea easiest to understand. Use concise, complete bullets for distinct ideas, short prose for explanations that need continuity, and tables for comparisons. Add a figure, diagram, or example when it clarifies structure, relationships, sequence, or behavior. Give figures clear labels and a short explanation of what the reader should notice; keep them at the page’s level of detail. Avoid dense paragraphs, fragmented bullet inventories, and decorative figures.
 
 Start with purpose and the core idea, then essential context and interactions, a few internal parts, and deeper detail. Aim for three to five peer concepts. This is a guideline, not a rigid cap: regroup meaningfully and preserve necessary constraints. Modules repeat enough context to be understood independently. Upper pages tell a coherent story rather than merely listing links; leaves hold exact interfaces, algorithms, configuration, and edge cases.
 

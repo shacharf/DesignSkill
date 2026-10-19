@@ -3,12 +3,12 @@ name: doc-design
 description: Organize rough system documents into a hierarchical design; guide module-focused work, maintain TODOs, and save or resume design discussions in a docagent project.
 ---
 
-Run `docagent status --json` once to recover the saved working brief, selected module, and discussion resume. Read named excerpts deliberately. Start with the user's goal and sources; help shape `design.md` before elaborating individual modules. Use [the reading contract](references/reading-contract.md) when shaping or changing the hierarchy.
+Run `docagent status --json` once to recover the saved working brief, selected module, and discussion resume. Read named excerpts deliberately. Start with the user's goal and sources; help shape `design.md` before elaborating individual modules. Apply [the reading contract](references/reading-contract.md) to every document you author, including TODOs and working summaries, as well as when shaping the hierarchy.
 
 ## Focus and navigation
 Use `docagent tree` to understand the hierarchy and `module show ID` for a known module. Create modules with `module create "Title" --parent ID`; select with `module select ID`. Keep one immediate design question in focus. Save conversation-only reasoning before switching. Direct selection changes pointers only and cannot summarize chat. Starting a new project does not require an invented discussion if there is nothing yet to preserve.
 
-Use doc-sources for extracting inputs, doc-brainstorm for alternatives, doc-write for design prose, doc-review for readability and consistency, and doc-help for guidance. Do not force all skills through every small task. Ask only questions whose answers materially affect the design; continue independent work where possible.
+Use doc-sources for extracting inputs, doc-brainstorm for alternatives, doc-write for design prose, doc-review for readability and consistency, and doc-help for guidance. After substantial drafting or revision, apply doc-review to the changed pages and affected connections; review overall consistency at major milestones. Do not force all skills through every small task. Ask only questions whose answers materially affect the design; continue independent work where possible.
 
 ## Work tracking
 `TODO.md` is the authoritative backlog. Add concrete questions or tasks with `docagent todo "Task" --why "Motivation" --module ID`. Preserve user ordering; do not silently reprioritize. Starting with `todo --start ID` retains the item, marks it active, and opens or resumes its discussion. `todo --done ID` preserves it in Done; use only when the outcome and required design edits are saved. Other skills may add unresolved work. Show a few current items, not the entire backlog, unless asked. Use `--all` for completed items. Explain source origins in the motivation or linked discussion when relevant.
