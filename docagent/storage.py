@@ -129,6 +129,9 @@ class Project:
         for name, text in defaults.items():
             atomic_write(root / name, text)
         atomic_write(root / '.docagent/config.json', json.dumps({'schema': 1, 'high_water': {}}))
+        readme = root / 'README.md'
+        if not readme.exists():
+            atomic_write(readme, '# Design project\n\nThis project develops a progressively detailed system design.\n\n- [Main design ideas](design.md): start here to understand the system.\n- [Work to do](TODO.md): open tasks and design questions.\n- [Workflow help](DOC_WORKFLOW.md): skills, commands, and how to continue.\n')
         project = cls(root)
         with project.lock():
             project.refresh_navigation()
@@ -494,7 +497,7 @@ class Project:
             links = '\n'.join(f"- [{link_label(child['title'])}]({os.path.relpath(self.local(child['path']), path.parent)})" for child in children)
             if '<!-- doc:children:start -->' in body:
                 changes[path] = doc_text(meta, replace_section(body, 'children', links))
-        navigation = '\n'.join('  ' * row['depth'] + f"- [{link_label(row['title'])}]({row['path']})" for row in rows)
+        navigation = '- [Project home](README.md)\n' + '\n'.join('  ' * row['depth'] + f"- [{link_label(row['title'])}]({row['path']})" for row in rows)
         navigation += '\n- [TODO](TODO.md)\n- [Working context](WORK.md)\n- [Help](DOC_WORKFLOW.md)'
         sidebar = self.root / '_sidebar.md'
         if sidebar.exists() and '<!-- doc:navigation:start -->' in sidebar.read_text():

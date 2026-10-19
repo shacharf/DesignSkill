@@ -90,6 +90,7 @@ Run these in a normal terminal without AI inference. Hosts with direct shell mod
 
 | Location | Purpose |
 | --- | --- |
+| `README.md` | Project introduction and links to the design, tasks, and workflow |
 | `design.md`, `modules/` | Reader-facing design; module parent IDs define the hierarchy |
 | `sources/`, `sources/files/` | Extraction notes and byte-preserved local originals |
 | `discussions/` | Brainstorming, alternatives, decisions, and compact resumes |
@@ -115,7 +116,7 @@ python3 -m http.server 8000
 # Open http://localhost:8000
 ```
 
-The Docsify viewer opens `design.md`, shows hierarchical navigation, hides frontmatter, and supports Mermaid diagrams. CDN assets require network access; the Markdown remains directly readable offline. Existing custom viewers are preserved by the installer. No publication or hosting is performed.
+The Docsify viewer opens `README.md`, which introduces the project and links to `design.md` for the main design ideas. The sidebar includes project home and the design hierarchy. The viewer hides frontmatter and supports Mermaid diagrams. CDN assets require network access; the Markdown remains directly readable offline. Existing custom viewers are preserved by the installer. No publication or hosting is performed.
 
 Structural validation checks local file targets, not Markdown anchors, prose correctness, or every possible Markdown link syntax. doc-review provides the human-readability and semantic checks.
 

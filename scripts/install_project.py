@@ -143,8 +143,6 @@ def install(project: Path, engine: str, skip_gno: bool = False) -> dict:
     renderer = project / 'index.html'
     if not renderer.exists():
         shutil.copyfile(SOURCE / 'index.html', renderer)
-    if not (project / 'README.md').exists():
-        (project / 'README.md').write_text('# Design project\n\nStart with `docagent status`. See [workflow instructions](DOC_WORKFLOW.md).\n')
     state['engines'] = sorted(set(state['engines'] + [engine]))
     state['offline_test_install'] = skip_gno
     state_path.write_text(json.dumps(state, indent=2) + '\n')
