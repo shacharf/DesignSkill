@@ -32,13 +32,64 @@ After editing this toolkit, reinstall the command with `uv tool install --reinst
 
 ## Typical workflow
 
-1. **Understand:** ask doc-sources to read your documents and extract ideas, constraints, and conflicts with source locations.
-2. **Shape:** use doc-design to establish the main story in `design.md` and a few major modules.
-3. **Explore:** use doc-brainstorm when a design choice needs alternatives and tradeoffs.
-4. **Explain:** use doc-write to develop a selected module, repeating the same progression at each depth.
-5. **Review:** after substantial drafting or revision, use doc-review to check readability, ambiguous interpretations, missing behavior, and consistency across affected modules. At major milestones, review the overall design. Record unresolved questions instead of inventing answers; small wording edits need no full review.
+The examples below use Codex skill syntax (`$doc-brainstorm`). In Claude use `/doc-brainstorm`, or make the same request in ordinary language. Run shell commands in the project directory. Use the task IDs returned by your commands; the IDs below are examples.
 
-Use doc-help whenever you need guidance. Invoke skills as `$doc-design` in Codex or `/doc-design` in Claude, or request the task naturally. Skills are not a mandatory pipeline. They save meaningful progress and resume context so a later conversation can continue.
+### 1. Resume and understand the inputs
+
+```bash
+cd /path/to/design
+docagent status
+```
+
+Ask: **“$doc-sources Read these documents and summarize the main ideas, constraints, and open questions.”** Then use doc-design/doc-write to establish the main explanation in `design.md`. Source originals remain unchanged.
+
+### 2. Prepare the agenda with stronger reasoning
+
+Ask: **“$doc-brainstorm Organize these ideas into top-level topics. Plan only the first topic in detail, using the current design and prior outcomes.”**
+
+There is no limit on task count. Future topics have only a purpose and known dependencies; their subtopics do not exist yet. The agent starts the current topic, creates its focused subtopics, and fills their linked briefs with context, watch points, evidence, expected outcomes, and model recommendations.
+
+```bash
+docagent todo
+docagent todo --start t001
+```
+
+For example, the agent can add a current subtopic with `docagent todo "Clarify retry behavior" --parent t001 --why "Avoid duplicate work after restart"`. Each subtopic gets a discussion file for its brief and later outcome. Adding a future top-level topic does not create its discussion or subtopics.
+
+### 3. Discuss one subtopic in a fresh session
+
+```bash
+docagent todo --next
+docagent todo --start t003
+docagent todo --show t003
+```
+
+Use a suitable lower-cost model when the question is bounded. The agent suggests a model/effort change only when helpful; you select it in the host and open a fresh chat in the same project. Ask: **“$doc-brainstorm Continue topic t003 using its saved brief, current planning summary, and relevant sources.”** The brief must be prepared before handoff. Significant architectural questions or conflicting evidence need stronger reasoning.
+
+### 4. Save the outcome and finish the current topic
+
+Ask: **“Save the result and rationale. Update the design where agreed, review substantial changes, and add or update TODOs for unresolved old and new questions.”** The agent writes the discussion's Outcome and handoff block before marking the subtopic done.
+
+```bash
+docagent todo --done t003
+```
+
+Before closing the parent, every child must be completed, explicitly dropped with a reason, or deferred with an open linked follow-up. Save the parent outcome and update WORK.md's cumulative planning summary with the important decisions and reasons, constraints, open questions, implications for later work, and a link to the parent outcome.
+
+```bash
+docagent todo --done t001
+docagent checkpoint
+```
+
+`checkpoint` checks already-saved files; the agent must summarize the conversation first. Reassess the remaining agenda before starting and expanding the next parent. Replan immediately if discoveries invalidate the current plan; useful work and explicit follow-ups remain recorded.
+
+### 5. View the agenda and design
+
+```bash
+python3 -m http.server 8000
+```
+
+Open **http://localhost:8000**. The README links to the main design; the sidebar's **TODO** entry opens the two-level agenda with visible motivations, statuses, model recommendations, and discussion links. Completed topic records remain available under Done.
 
 ### Reading contract
 
@@ -50,41 +101,26 @@ Start with purpose and the core idea, then essential context and interactions, a
 
 Source proposals are not automatically accepted design decisions. Keep original material, alternative history, and rationale separate from the current design. Clearly mark unresolved choices.
 
-## Direct commands
+## Delegation and cost
 
-Run these in a normal terminal without AI inference. Hosts with direct shell mode may accept `!docagent ...`.
+The project instructions request selective delegation for substantial independent work. The host agent spawns workers; `docagent` continues to handle deterministic operations directly. No additional skill or AI service is required.
 
-| Command | Result |
+| Task | Default assignment |
 | --- | --- |
-| `docagent help` | Workflow help, even outside a project |
-| `docagent status` | Bounded working brief, current module, discussion resume, search freshness |
-| `docagent tree` | Full design hierarchy |
-| `docagent module create "Coordination" --parent root` | Create a module with a stable ID |
-| `docagent module select m001` | Select module; clear a discussion from a different module |
-| `docagent module show m001` | Read its saved content |
-| `docagent module move m002 --parent m001` | Reparent safely; reject hierarchy cycles |
-| `docagent discussion create "Assignment strategy" --module m001` | Create a discussion |
-| `docagent discussion list` | List saved discussions |
-| `docagent discussion select d001` | Select an open discussion and its module |
-| `docagent discussion show d001` | Read its saved content |
-| `docagent discussion state d001 closed` | Close; also supports open and obsolete |
-| `docagent todo` | Pending and active tasks, in file order |
-| `docagent todo "Clarify recovery" --why "Avoid duplicate work" --module m001` | Add a task with motivation |
-| `docagent todo --start t001` | Retain task, mark active, create or resume its discussion |
-| `docagent todo --done t001` | Preserve completed task in collapsed Done section |
-| `docagent todo --delete t001` | Remove an unwanted task; preserve its discussion |
-| `docagent todo --next` | First outstanding item in file order |
-| `docagent todo --all` | Include completed tasks |
-| `docagent source add /path/to/notes.md` | Copy original bytes and create a source note |
-| `docagent source add https://example.org/design --title "External design"` | Register a URL without fetching it |
-| `docagent source list` / `source show s001` | Inspect registered sources |
-| `docagent search "assignment" --limit 5` | Bounded lexical retrieval |
-| `docagent search "recovery strategy" --hybrid` | Hybrid retrieval; `--semantic` is also available |
-| `docagent validate` | Check hierarchy, pointers, resumes, TODO records, and local file links |
-| `docagent checkpoint` | Validate saved Markdown, update navigation, enqueue indexing |
-| `docagent index status` / `index flush --lexical-only` | Inspect freshness or explicitly synchronize |
+| TODOs, navigation, structural validation | Direct `docagent` command |
+| Explicit source extraction or a substantial wording edit | Lower-cost worker, low effort |
+| Independent ambiguity or missing-explanation review of one module | Lower-cost worker, medium effort |
+| Architecture, conflicting evidence, hierarchy changes, final integration | Main agent |
 
-`--json` and `--project /path/to/design` work before or after commands. Use `COMMAND --help` for arguments. Read commands do not rebuild indexes. `validate` returns exit code 1 for diagnostics; invalid operations return 2. More than five children produces a review warning rather than a hard failure.
+On Codex, the skills explicitly request `gpt-6-luna` for delegated work, with `low` or `medium` effort as above. User settings take precedence. Other hosts may use an explicitly available lower-cost equivalent; if suitable model selection is unavailable, the main agent does the work and briefly reports the fallback. These are task defaults, not a guarantee of price or account availability.
+
+Start with one worker and use at most two concurrently for independent assignments. Provide a fresh task context with the required sources, reading rules, constraints, and expected output. Avoid inheriting the entire chat. Default to read-only findings or proposed text; delegated edits must have non-overlapping file ownership. Workers report uncertainties, source locations, and checks, and do not spawn more workers or modify shared TODOs, active pointers, navigation, or checkpoints.
+
+The main agent verifies consequential claims and meaning, integrates accepted results, updates shared work records, and checkpoints. Conflicts or missing information return to the main agent for judgment. Small tasks stay in the main thread. Additional workers consume resources: judge the benefit against briefing and integration overhead rather than assuming parallel work is cheaper.
+
+## More help
+
+Use `docagent help` for the full command reference, or ask `$doc-help` for workflow guidance. Direct commands run without an AI turn; hosts with direct shell mode may accept `!docagent ...`. `--json` and `--project /path/to/design` are available for automation. Model recommendations are saved text, not automatic model switches.
 
 ## Files and editing
 
@@ -94,12 +130,16 @@ Run these in a normal terminal without AI inference. Hosts with direct shell mod
 | `design.md`, `modules/` | Reader-facing design; module parent IDs define the hierarchy |
 | `sources/`, `sources/files/` | Extraction notes and byte-preserved local originals |
 | `discussions/` | Brainstorming, alternatives, decisions, and compact resumes |
-| `TODO.md`, `WORK.md` | Work queue, shared working brief, and active pointers |
+| `TODO.md`, `WORK.md` | Two-level agenda, cumulative planning summary, and current work pointers |
 | `.docagent/` | Runtime configuration, transaction journal, installation records, and search state |
 
 IDs are stable (`root`, `m001`, `d001`, `s001`, `t001`). Module files are flat on disk; parent metadata defines the reading hierarchy, so moving a module does not break links. Shared dependencies use normal cross-links rather than multiple parents. Edit Markdown directly, preserving frontmatter and managed marker pairs. `checkpoint` updates generated child links and sidebar navigation while retaining surrounding prose.
 
-TODO records are Markdown checkboxes with a metadata comment containing status, module, motivation, originating discussion, and working discussion. Directly edit task text and ordering; use CLI commands for lifecycle changes. Default command output lists outstanding work; skill conversations show only a few relevant items. `--start` is retryable and does not remove the task. Mark done when its outcome and needed design edits are saved; the CLI obeys your instruction and cannot judge semantic completion.
+TODO records have stable IDs and optional parent IDs; old flat tasks remain top-level topics. The first TODO mutation upgrades old records to the readable agenda layout while preserving IDs, ordering, surrounding prose, and existing discussion links. Only the current topic can acquire subtopics, and finishing it never expands or starts the next topic automatically. There is no task-count limit.
+
+Task fields and navigation are managed by docagent. Preserve its marker pairs. Keep detailed briefs, watch points, evidence, and outcomes in the linked discussions; add free-form agenda notes inside each task's notes markers. Such notes and surrounding custom prose survive regeneration. Generated task fields should be changed through their record metadata and then checkpointed; use lifecycle commands for status changes. `--delete` is a compatibility alias for dropping work with a reason, preserving history.
+
+Completing work checks for a saved outcome; the skill judges whether it is meaningful and carries open questions forward. `--defer` requires a reason and an open successor linked with `--follow-up-for`. Existing unfinished questions should be reused or updated rather than duplicated; the full CLI help includes a link operation for reusing an open successor. Future follow-ups remain brief top-level items until their turn. WORK.md's bounded cumulative summary links detailed outcomes; it is not the complete historical record.
 
 Local source registration deduplicates by content hash and copies any file format. Reading and text extraction are skill responsibilities; GNO configuration indexes Markdown and PDF, so other formats need readable extraction notes for retrieval. URL registration neither downloads content nor claims it has been read.
 

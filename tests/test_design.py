@@ -56,6 +56,10 @@ def test_todo_lifecycle_retains_reason_and_idempotent_discussion(project):
     assert len(project.records('discussion')) == 1
     assert project.todos()[0]['status'] == 'active'
     assert 'Avoid duplicate work' in project.record('discussion', started['discussion'])[2]
+    path, meta, body = project.record('discussion', started['discussion'])
+    atomic_write(path, doc_text(meta, replace_section(body, 'outcome', 'Recovery uses stable work IDs to prevent duplicates.')) )
+    context, work = project.context()
+    atomic_write(project.root / 'WORK.md', doc_text(context, replace_section(work, 'brief', f'Recovery uses stable IDs. [Outcome]({path.relative_to(project.root).as_posix()}). Next: assess capacity.')))
     project.update_todo(todo['id'], 'done')
     assert project.todos() == []
     assert project.todos(True)[0]['why'] == 'Avoid duplicate work'

@@ -48,7 +48,7 @@ def read_doc(path):
         raise Error(f'{path}: invalid YAML: {exc}') from exc
     if not isinstance(meta, dict):
         raise Error(f'{path}: frontmatter must be a mapping')
-    for field in ('id', 'parent', 'module', 'active_module', 'active_discussion'):
+    for field in ('id', 'parent', 'module', 'active_module', 'active_discussion', 'active_topic', 'active_todo'):
         if field in meta and not isinstance(meta[field], str):
             raise Error(f'{path}: {field} must be a string; quote numeric IDs')
     return meta, text[match.end():]
@@ -116,8 +116,8 @@ class Project:
             return cls(root)
         defaults = {
             'design.md': doc_text({'id': 'root', 'title': 'Main ideas', 'parent': ''}, '# Main ideas\n\n## Purpose\nTo be established from the source material.\n\n## Core idea\nNot established yet.\n\n## Context\nNot established yet.\n\n## Parts\n<!-- doc:children:start -->\n<!-- doc:children:end -->\n'),
-            'WORK.md': doc_text({'active_module': 'root', 'active_discussion': ''}, '# Working context\n\n<!-- doc:brief:start -->\nExplain the system clearly, then refine one module at a time.\n<!-- doc:brief:end -->\n'),
-            'TODO.md': '# TODO\n\n## Current work\n\n<details>\n<summary>Done</summary>\n\n<!-- doc:done:start -->\n<!-- doc:done:end -->\n\n</details>\n',
+            'WORK.md': doc_text({'active_module': 'root', 'active_discussion': '', 'active_topic': '', 'active_todo': ''}, '# Working context\n\n## Cumulative planning summary\n<!-- doc:brief:start -->\nExplain the system clearly, then refine one module at a time.\n<!-- doc:brief:end -->\n'),
+            'TODO.md': '# Discussion agenda\n\nTop-level topics are planned in order. Subtopics are created only for the current topic.\n\n## Agenda\n<!-- doc:agenda:start -->\n<!-- doc:agenda:end -->\n\n<details>\n<summary>Done</summary>\n\n<!-- doc:done:start -->\n<!-- doc:done:end -->\n\n</details>\n',
             '_sidebar.md': '<!-- doc:navigation:start -->\n<!-- doc:navigation:end -->\n',
         }
         conflicts = [name for name in defaults if (root / name).exists()]
@@ -215,6 +215,13 @@ class Project:
         if meta.get('active_discussion'):
             path, discussion, content = self.record('discussion', meta['active_discussion'])
             result['discussion'] = {**discussion, 'resume': bounded(section(content, 'resume'), RESUME_LIMIT, str(path))}
+        current = meta.get('active_topic', '')
+        if current:
+            from .tasks import get
+            result['topic'] = get(self.todos(True), current)
+            result['next'] = self.next_todo()
+            if meta.get('active_todo'):
+                result['handoff'] = f"docagent todo --show {meta['active_todo']}"
         return result
 
     def select(self, kind, identifier):
@@ -289,76 +296,32 @@ class Project:
         return {'id': identifier, 'status': status}
 
     def todos(self, include_done=False):
-        text = (self.root / 'TODO.md').read_text()
-        rows = []
-        pattern = r'^- \[([ x])\] <!-- doc:todo:(t\d+) (\{.*\}) --> (.*)$'
-        for match in re.finditer(pattern, text, re.M):
-            try:
-                meta = json.loads(match[3])
-            except ValueError as exc:
-                raise Error(f'invalid TODO metadata: {match[2]}') from exc
-            if not isinstance(meta, dict) or meta.get('status') not in ('pending', 'active', 'done'):
-                raise Error(f'invalid TODO status: {match[2]}')
-            if (match[1] == 'x') != (meta['status'] == 'done'):
-                raise Error(f'TODO checkbox/status mismatch: {match[2]}')
-            rows.append({**meta, 'id': match[2], 'text': match[4]})
-        if text.count('<!-- doc:todo:') != len(rows):
-            raise Error('malformed TODO record')
-        if len({row['id'] for row in rows}) != len(rows):
-            raise Error('duplicate TODO IDs')
-        return rows if include_done else [row for row in rows if row['status'] != 'done']
+        from .tasks import load
+        return load(self, include_done)
 
     def todo_line(self, item):
-        meta = {key: value for key, value in item.items() if key not in ('id', 'text')}
-        return f"- [{'x' if item['status'] == 'done' else ' '}] <!-- doc:todo:{item['id']} {json.dumps(meta, ensure_ascii=False)} --> {item['text']}"
+        from .tasks import line
+        return line(item)
 
-    def add_todo(self, text, why='', module=None):
-        module = module or self.context()[0]['active_module']
-        self.record('module', module)
-        item = {'id': self.allocate('todo'), 'text': title_text(text), 'why': ' '.join(why.split()), 'module': module,
-                'discussion': '', 'origin': self.context()[0].get('active_discussion', ''), 'status': 'pending'}
-        path = self.root / 'TODO.md'
-        content = path.read_text()
-        position = content.index('<details>') if '<details>' in content else len(content)
-        content = content[:position].rstrip() + '\n\n' + self.todo_line(item) + '\n\n' + content[position:]
-        self.transaction({path: content})
-        return item
+    def add_todo(self, text, why='', module=None, parent='', model='', followup_for=''):
+        from .tasks import add
+        return add(self, text, why, module, parent, model, followup_for)
 
-    def update_todo(self, identifier, operation):
-        item = next((item for item in self.todos(True) if item['id'] == identifier), None)
-        if not item:
-            raise Error(f'unknown TODO {identifier}')
-        path = self.root / 'TODO.md'
-        content = path.read_text()
-        changes = {}
-        if operation == 'start':
-            if item['status'] == 'done':
-                raise Error('TODO is already done')
-            if not item['discussion']:
-                discussion = self.allocate('discussion')
-                item['discussion'] = discussion
-                discussion_path = f'discussions/{discussion}.md'
-                changes[discussion_path] = doc_text({'id': discussion, 'title': item['text'], 'module': item['module'], 'status': 'open'}, resume_body(item['text']) + f"\nStarted from TODO {identifier}.\n\nMotivation: {item['why']}\n")
-            else:
-                discussion_path, meta, body = self.record('discussion', item['discussion'])
-                meta['status'] = 'open'
-                changes[discussion_path] = doc_text(meta, body)
-            context, body = self.context()
-            context.update(active_module=item['module'], active_discussion=item['discussion'])
-            changes['WORK.md'] = doc_text(context, body)
-            item['status'] = 'active'
-        elif operation == 'done':
-            if item['status'] == 'done':
-                return item
-            item['status'] = 'done'
-        pattern = rf'^- \[[ x]\] <!-- doc:todo:{re.escape(identifier)} .*? --> .*\n?'
-        replacement = self.todo_line(item) + '\n' if operation == 'start' else ''
-        content = re.sub(pattern, lambda _: replacement, content, flags=re.M)
-        if operation == 'done':
-            content = replace_section(content, 'done', section(content, 'done') + '\n' + self.todo_line(item))
-        changes[path] = content
-        self.transaction(changes)
-        return item if operation != 'delete' else {'deleted': identifier}
+    def update_todo(self, identifier, operation, reason='', model=None):
+        from .tasks import update
+        return update(self, identifier, operation, reason, model)
+
+    def link_todo(self, identifier, origin):
+        from .tasks import link
+        return link(self, identifier, origin)
+
+    def next_todo(self):
+        from .tasks import next_item
+        return next_item(self)
+
+    def show_todo(self, identifier):
+        from .tasks import show
+        return show(self, identifier)
 
     def add_source(self, value, title=None):
         parsed = urlsplit(value)
@@ -460,7 +423,10 @@ class Project:
                 errors.append('working brief exceeds bounded size')
         except Error as exc:
             errors.append(str(exc))
-        for item in self.todos(True):
+        from .tasks import check
+        todo_rows = self.todos(True)
+        errors.extend(check(self, todo_rows))
+        for item in todo_rows:
             if item.get('module') not in module_ids:
                 errors.append(f"TODO {item['id']}: missing module")
             for key in ('discussion', 'origin'):
@@ -509,6 +475,8 @@ class Project:
         result = self.validate()
         if not result['valid']:
             raise Error('checkpoint incomplete: ' + '; '.join(result['diagnostics']))
+        from .tasks import save
+        save(self, self.todos(True))
         self.refresh_navigation()
         self.enqueue(self.content_files())
         from .indexing import state

@@ -14,14 +14,23 @@ Direct commands run without an AI turn:
   module create TITLE --parent ID / select ID / show ID / move ID --parent ID
   discussion create TITLE [--module ID] / list / select ID / show ID
   discussion state ID open|closed|obsolete
-  todo [TEXT --why REASON]        List outstanding work, or add a task
-  todo --start ID / --done ID / --delete ID / --all / --next
+  todo [TEXT --why REASON --parent TOPIC]        List outstanding work, or add a task
+  todo --start ID / --done ID / --show ID / --all / --next
+  todo --defer ID --reason TEXT   Defer after adding an open --follow-up-for ID task
+  todo --drop ID --reason TEXT    Retire obsolete work with a reason
+  todo TEXT --follow-up-for ID    Preserve an unresolved question as follow-up work
+  todo --link ID --follow-up-for OLD_ID   Reuse an existing open follow-up
   source add FILE_OR_URL / list / show ID
   search QUERY [--hybrid]         Search the project through GNO
   validate / checkpoint          Check files; checkpoint also refreshes navigation
   index status / flush            Inspect freshness or explicitly rebuild/retry
 
-Files: design.md and modules/ explain the system; sources/ preserves inputs;
+Start top-level topics in order; plan children only for the current topic.
+--next selects its next subtopic or requests planning/closure; it never advances
+automatically. Before --done, save the discussion outcome block. Finishing a
+parent also requires updating the WORK.md brief with a link to its outcome.
+
+Files: README.md introduces the project; design.md and modules/ explain the system; sources/ preserves inputs;
 discussions/ preserves reasoning; TODO.md tracks work; WORK.md holds saved focus.
 Edit Markdown directly. Run checkpoint after manual edits. Selection changes
 saved pointers only: it cannot summarize an unsaved conversation.
@@ -58,8 +67,10 @@ def parser():
             state = operations.add_parser('state'); state.add_argument('id'); state.add_argument('state', choices=('open', 'closed', 'obsolete'))
     todo = commands.add_parser('todo')
     todo.add_argument('text', nargs='?'); todo.add_argument('--why', default=''); todo.add_argument('--module')
+    todo.add_argument('--parent', default=''); todo.add_argument('--model', help='Human-readable model/effort recommendation and reason; never switches the model')
+    todo.add_argument('--follow-up-for', default=''); todo.add_argument('--reason', default='')
     group = todo.add_mutually_exclusive_group()
-    for name in ('start', 'done', 'delete'):
+    for name in ('start', 'done', 'delete', 'defer', 'drop', 'show', 'link'):
         group.add_argument('--' + name)
     group.add_argument('--all', action='store_true'); group.add_argument('--next', action='store_true')
     index = commands.add_parser('index').add_subparsers(dest='operation', required=True)
@@ -92,14 +103,29 @@ def run(args, project):
             if args.operation == 'state': return project.discussion_state(args.id, args.state)
             return project.create_discussion(args.title, args.module)
     if command == 'todo':
-        operation = next((name for name in ('start', 'done', 'delete') if getattr(args, name)), None)
-        if (args.text and (operation or args.all or args.next)) or (not args.text and (args.why or args.module)):
-            raise Error('TODO text/metadata cannot be combined with list or update options')
-        if args.text or operation:
+        operation = next((name for name in ('start', 'done', 'delete', 'defer', 'drop', 'show', 'link') if getattr(args, name)), None)
+        if args.text:
+            if operation or args.all or args.next or args.reason:
+                raise Error('TODO creation cannot be combined with list/update options')
             with project.lock():
-                return project.add_todo(args.text, args.why, args.module) if args.text else project.update_todo(getattr(args, operation), operation)
-        items = project.todos(args.all)
-        return (items[0] if items else None) if args.next else items
+                return project.add_todo(args.text, args.why, args.module, args.parent, args.model or '', args.follow_up_for)
+        if operation == 'link':
+            if not args.follow_up_for or args.why or args.module or args.parent or args.reason or args.model is not None:
+                raise Error('link requires only --follow-up-for ORIGIN_ID')
+            with project.lock():
+                return project.link_todo(args.link, args.follow_up_for)
+        if args.why or args.module or args.parent or args.follow_up_for:
+            raise Error('task metadata requires TODO text')
+        if operation == 'show':
+            if args.reason or args.model is not None: raise Error('show cannot change task metadata')
+            return project.show_todo(args.show)
+        if operation:
+            if args.model is not None and operation != 'start': raise Error('--model applies to creation or start')
+            if args.reason and operation not in ('defer', 'drop', 'delete'): raise Error('--reason applies to defer/drop')
+            with project.lock():
+                return project.update_todo(getattr(args, operation), operation, args.reason, args.model)
+        if args.reason or args.model is not None: raise Error('metadata requires a creation/update operation')
+        return project.next_todo() if args.next else project.todos(args.all)
     if command == 'index':
         from . import indexing
         if args.operation == 'status': return indexing.state(project.root)
@@ -121,15 +147,24 @@ def display(value):
             if 'discussion' in value:
                 lines += [f"Discussion: {value['discussion']['id']} — {value['discussion']['title']}", value['discussion']['resume']['text']]
             else: lines.append('No active discussion.')
+            if 'topic' in value:
+                lines.append(f"Current topic: {value['topic']['id']} — {value['topic']['text']}")
+                lines.append('Next: ' + display(value['next']))
+                if value.get('handoff'): lines.append('Read full brief: ' + value['handoff'])
             state = value['indexing']
             if state.get('lexical_pending') or state.get('semantic_pending'):
                 lines.append('Search indexing pending; saved Markdown is current.')
             for stage in ('lexical', 'semantic'):
                 if state.get(stage + '_error'): lines.append(f"{stage} indexing failed: {state[stage + '_error']}")
             return '\n'.join(lines)
-        if 'body' in value: return value['body']
+        if 'body' in value:
+            if 'planning_summary' in value:
+                return ('Cumulative planning summary (WORK.md):\n' + value['planning_summary'] +
+                        (f"\nParent discussion: {value['parent_discussion']}" if value.get('parent_discussion') else '') +
+                        (f"\nModel recommendation: {value['model']}" if value.get('model') else '') + '\n\n' + value['body'])
+            return value['body']
         if 'id' in value and 'text' in value:
-            return f"{value['id']} [{value['status']}] {value['text']} (module {value['module']})" + (f"\n  Why: {value['why']}" if value.get('why') else '') + (f"\n  Discussion: {value['discussion']}" if value.get('discussion') else '')
+            return ('  ' if value.get('parent') else '') + f"{value['id']} [{value['status']}] {value['text']} (module {value['module']})" + (f"\n  Why: {value['why']}" if value.get('why') else '') + (f"\n  Discussion: {value['discussion']}" if value.get('discussion') else '') + (f"\n  Model recommendation: {value['model']}" if value.get('model') else '') + (f"\n  Reason: {value['reason']}" if value.get('reason') else '')
         if 'id' in value and 'title' in value:
             return '  ' * value.get('depth', 0) + f"{value['id']} {value['title']}" + (f" [{value['status']}]" if 'status' in value else '') + (f" — {value['path']}" if 'path' in value else '')
         return '\n'.join(f'{key}: {json.dumps(item, ensure_ascii=False) if isinstance(item, (list, dict)) else item}' for key, item in value.items())
