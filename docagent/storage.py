@@ -115,7 +115,7 @@ class Project:
         if (root / '.docagent/config.json').exists():
             return cls(root)
         defaults = {
-            'design.md': doc_text({'id': 'root', 'title': 'Main ideas', 'parent': ''}, '# Main ideas\n\n## Purpose\nTo be established from the source material.\n\n## Core idea\nNot established yet.\n\n## Context\nNot established yet.\n\n## Parts\n<!-- doc:children:start -->\n<!-- doc:children:end -->\n'),
+            'design.md': doc_text({'id': 'root', 'title': 'Main ideas', 'parent': ''}, '# Main ideas\n\n## Purpose\nTo be established from the source material.\n\n## Key decisions at a glance\nNone recorded yet.\n\n## Core idea\nNot established yet.\n\n## Context\nNot established yet.\n\n## Parts\n<!-- doc:children:start -->\n<!-- doc:children:end -->\n'),
             'WORK.md': doc_text({'active_module': 'root', 'active_discussion': '', 'active_topic': '', 'active_todo': ''}, '# Working context\n\n## Cumulative planning summary\n<!-- doc:brief:start -->\nExplain the system clearly, then refine one module at a time.\n<!-- doc:brief:end -->\n'),
             'TODO.md': '# Discussion agenda\n\nTop-level topics are planned in order. Subtopics are created only for the current topic.\n\n## Agenda\n<!-- doc:agenda:start -->\n<!-- doc:agenda:end -->\n\n<details>\n<summary>Done</summary>\n\n<!-- doc:done:start -->\n<!-- doc:done:end -->\n\n</details>\n',
             '_sidebar.md': '<!-- doc:navigation:start -->\n<!-- doc:navigation:end -->\n',

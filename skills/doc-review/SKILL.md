@@ -13,6 +13,8 @@ Check for ambiguity: identify wording that admits materially different interpret
 
 Review source notes, discussions, TODOs, and working summaries for readability when they are in scope. Essential context, motivations, and decision status must be visible without inspecting hidden metadata. Bullets, prose, tables, and figures are all valid; assess whether they help the reader. Check that figures agree with the explanation and do not introduce unexplained concepts.
 
+When `design.md` is in scope, check its Key decisions at a glance section against the body and the linked outcomes: every item has a status tag and a working link, no proposal is tagged Decided, and no significant decision or open question in the body is missing from it.
+
 Compare parent summaries, child responsibilities, and neighboring interfaces. Distinguish contradictions, missing decisions, unsupported assertions, and stylistic improvements. Ground findings in specific passages or missing scenarios, explain their impact, and formulate a concrete clarification question or correction. Never fill a gap with an invented design decision. Lead with a few high-impact findings; keep the complete actionable backlog in TODO.md when requested or part of ongoing design work. Do not silently accept proposals or change architecture during a review. During an authorized drafting/revision task, fix clear editorial issues within scope, then recheck affected findings. Otherwise report proposed corrections. Record unresolved design questions in TODO.md when part of ongoing work. Do not recursively restart a full review after each correction; checkpoint once the scoped work is saved.
 
 ## Delegating an independent review

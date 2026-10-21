@@ -15,3 +15,5 @@ Upper levels explain mechanisms and responsibilities. Leaf pages carry exact int
 Design pages express the current design, including clearly marked unresolved choices. Original sources, competing alternatives, and historical rationale belong in source notes and discussions. Source content is evidence of what was written, not proof it was adopted. Never promote a proposal into a decision implicitly.
 
 A main ideas page must tell the story even if the reader follows no links. A page containing only child links does not satisfy the contract.
+
+`design.md` also carries a short **Key decisions at a glance** section after its purpose: one line per requirement or decision, grouped by system component, each tagged **Req** (user-given requirement or input condition), **Decided** (accepted), **Direction** (accepted working direction still to be validated) or **Open**, and linked to its discussion or TODO. It indexes the story; it does not replace it. It must agree with the body and the linked outcomes, and a status changes only when the underlying decision does. Its component groups are the starting candidates for top-level modules.

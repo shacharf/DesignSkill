@@ -74,7 +74,7 @@ Ask: **“Save the result and rationale. Update the design where agreed, review 
 docagent todo --done t003
 ```
 
-Before closing the parent, every child must be completed, explicitly dropped with a reason, or deferred with an open linked follow-up. Save the parent outcome and update WORK.md's cumulative planning summary with the important decisions and reasons, constraints, open questions, implications for later work, and a link to the parent outcome.
+Before closing the parent, every child must be completed, explicitly dropped with a reason, or deferred with an open linked follow-up. Save the parent outcome and update WORK.md's cumulative planning summary with the important decisions and reasons, constraints, open questions, implications for later work, and a link to the parent outcome. Also update the Key decisions at a glance section of `design.md` for every requirement or decision whose status changed.
 
 ```bash
 docagent todo --done t001
@@ -98,6 +98,8 @@ Every document we author is human-readable first, including design pages, source
 Choose the format that makes the idea easiest to understand. Use concise, complete bullets for distinct ideas, short prose for explanations that need continuity, and tables for comparisons. Add a figure, diagram, or example when it clarifies structure, relationships, sequence, or behavior. Give figures clear labels and a short explanation of what the reader should notice; keep them at the page’s level of detail. Avoid dense paragraphs, fragmented bullet inventories, and decorative figures.
 
 Start with purpose and the core idea, then essential context and interactions, a few internal parts, and deeper detail. Aim for three to five peer concepts. This is a guideline, not a rigid cap: regroup meaningfully and preserve necessary constraints. Modules repeat enough context to be understood independently. Upper pages tell a coherent story rather than merely listing links; leaves hold exact interfaces, algorithms, configuration, and edge cases.
+
+`design.md` opens with a short **Key decisions at a glance** section: one line per requirement or decision, grouped by system component, tagged Req, Decided, Direction or Open, and linked to its discussion or TODO. It is the quick overview during requirements work and the starting module list for component design.
 
 Source proposals are not automatically accepted design decisions. Keep original material, alternative history, and rationale separate from the current design. Clearly mark unresolved choices.
 
